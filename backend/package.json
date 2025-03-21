@@ -9,7 +9,6 @@
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
     "test": "jest",
-    
     "test:watch": "jest --watch",
     "deploy": "cd infrastructure && npm run deploy",
     "destroy": "cd infrastructure && npm run destroy",
@@ -18,7 +17,8 @@
     "start:local": "serverless offline start"
   },
   "dependencies": {
-    "aws-sdk": "^2.1152.0",
+    "aws-sdk": "^2.1692.0",
+    "dotenv": "^16.4.7",
     "nanoid": "^3.3.4",
     "uuid": "^8.3.2"
   },

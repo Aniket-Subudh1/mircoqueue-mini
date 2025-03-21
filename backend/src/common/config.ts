@@ -1,6 +1,7 @@
 import { STAGE, ENV, LIMITS } from './constants';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
-// Base configuration
 const baseConfig = {
   // System info
   serviceName: 'MicroQueue-Mini',

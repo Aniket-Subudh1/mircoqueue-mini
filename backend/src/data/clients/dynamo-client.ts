@@ -1,20 +1,27 @@
 import { DynamoDB } from 'aws-sdk';
-import { config } from '../../common/config';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 // Configure DynamoDB client
 const options: DynamoDB.ClientConfiguration = {
-  maxRetries: config.dynamodb.maxRetries,
+  region: process.env.AWS_REGION || 'us-east-1',
+  maxRetries: 3,
   httpOptions: {
-    timeout: config.dynamodb.timeout,
+    timeout: 5000,
   },
+  ...(process.env.IS_LOCAL && {
+    accessKeyId: 'localstack',
+    secretAccessKey: 'localstack',
+  })
 };
 
-// Use local endpoint for development if provided
+
 if (process.env.DYNAMODB_ENDPOINT) {
+  console.log(`Using local DynamoDB endpoint: ${process.env.DYNAMODB_ENDPOINT}`);
   options.endpoint = process.env.DYNAMODB_ENDPOINT;
 }
 
-// Create DynamoDB document client instance
+
 export const dynamoClient = new DynamoDB.DocumentClient(options);
 
 export default dynamoClient;

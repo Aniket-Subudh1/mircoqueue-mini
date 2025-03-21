@@ -4,8 +4,7 @@ frameworkVersion: '3'
 
 plugins:
 - serverless-esbuild
-  - serverless-offline-docker
-  - serverless-offline
+- serverless-offline
 
 provider:
   name: aws
@@ -23,6 +22,7 @@ provider:
     OFFSETS_TABLE: MicroQueue-Offsets-dev
     MESSAGES_BUCKET: microqueue-messages-dev-local
     ARCHIVE_BUCKET: microqueue-archive-dev-local
+    IS_LOCAL: true
   
   iam:
     role:
@@ -79,7 +79,7 @@ custom:
   serverless-offline:
     httpPort: 3001
     lambdaPort: 3002
-
+    noAuth: true 
 functions:
   # Topic endpoints
   createTopic:
