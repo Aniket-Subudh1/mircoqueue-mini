@@ -1,3 +1,4 @@
+// frontend/src/App.tsx
 import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
@@ -7,8 +8,10 @@ import routes from './routes';
 import MainLayout from '@/layouts/MainLayout';
 import AuthLayout from '@/layouts/AuthLayout';
 import MinimalLayout from '@/layouts/MinimalLayout';
+import MockDataToggle from '@/components/development/MockDataToggle';
 import { fetchTopics } from '@/store/slices/topicsSlice';
 import { fetchSystemMetrics } from '@/store/slices/metricsSlice';
+import config from '@/utils/env';
 
 function App() {
   const dispatch = useAppDispatch();
@@ -19,18 +22,22 @@ function App() {
     dispatch(fetchTopics());
     dispatch(fetchSystemMetrics());
 
-   
-    const metricsInterval = setInterval(() => {
-      dispatch(fetchSystemMetrics());
-    }, refreshInterval * 1000); 
+    // Set up refresh intervals if auto-refresh is enabled
+    if (config.FEATURES.AUTO_REFRESH) {
+      // Refresh metrics more frequently than topics
+      const metricsInterval = setInterval(() => {
+        dispatch(fetchSystemMetrics());
+      }, refreshInterval * 1000); 
 
-    const topicsInterval = setInterval(() => {
-      dispatch(fetchTopics());
-    }, refreshInterval * 2000); 
-    return () => {
-      clearInterval(metricsInterval);
-      clearInterval(topicsInterval);
-    };
+      const topicsInterval = setInterval(() => {
+        dispatch(fetchTopics());
+      }, refreshInterval * 2000); 
+      
+      return () => {
+        clearInterval(metricsInterval);
+        clearInterval(topicsInterval);
+      };
+    }
   }, [dispatch, refreshInterval]);
 
   return (
@@ -85,6 +92,9 @@ function App() {
           })}
         </Route>
       </Routes>
+      
+      {/* Development Tools */}
+      <MockDataToggle />
     </ThemeProvider>
   );
 }

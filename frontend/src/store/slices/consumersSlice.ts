@@ -1,6 +1,7 @@
+// frontend/src/store/slices/consumersSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { ConsumerGroup, CreateConsumerGroupRequest } from '@/types/consumer';
-import * as consumerService from '@/services/consumerService';
+import { consumerService } from '@/services/serviceFactory';
 
 interface ConsumersState {
   consumerGroups: ConsumerGroup[];
@@ -117,8 +118,8 @@ const consumersSlice = createSlice({
         state.createConsumerGroupLoading = false;
         state.createConsumerGroupError = action.payload as string;
       })
-      
 
+      // Delete consumer group
       .addCase(deleteConsumerGroup.fulfilled, (state, action: PayloadAction<string>) => {
         state.consumerGroups = state.consumerGroups.filter(
           group => group.groupId !== action.payload
@@ -127,10 +128,11 @@ const consumersSlice = createSlice({
           state.currentConsumerGroup = null;
         }
       })
-      
 
+      // Reset consumer group offset
       .addCase(resetConsumerGroupOffset.fulfilled, (state, action: PayloadAction<string>) => {
-       
+        // This operation doesn't change the state directly
+        // We could potentially update the consumer group's lastConsumedTimestamp
       });
   },
 });

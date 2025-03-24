@@ -1,6 +1,7 @@
+// frontend/src/store/slices/metricsSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { SystemMetrics, TopicMetrics, DashboardMetrics } from '@/types/metrics';
-import * as metricsService from '@/services/metricsService';
+import { metricsService } from '@/services/serviceFactory';
 
 interface MetricsState {
   system: SystemMetrics | null;

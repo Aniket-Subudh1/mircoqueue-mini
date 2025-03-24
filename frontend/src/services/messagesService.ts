@@ -6,6 +6,7 @@ import {
   ConsumeMessagesResponse
 } from '@/types/message';
 
+// Publish a message to a topic
 export const publishMessage = async (
   topicId: string,
   message: PublishMessageRequest
@@ -13,6 +14,7 @@ export const publishMessage = async (
   return post<PublishMessageResponse>(`/topics/${topicId}/messages`, message);
 };
 
+// Consume messages from a topic
 export const consumeMessages = async (
   topicId: string,
   request: ConsumeMessagesRequest

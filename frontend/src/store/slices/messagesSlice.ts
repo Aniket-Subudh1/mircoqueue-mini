@@ -1,3 +1,4 @@
+// frontend/src/store/slices/messagesSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { 
   PublishMessageRequest, 
@@ -6,7 +7,7 @@ import {
   ConsumeMessagesResponse,
   MessageWithPayload 
 } from '@/types/message';
-import * as messagesService from '@/services/messagesService';
+import { messagesService } from '@/services/serviceFactory';
 
 interface MessagesState {
   messages: MessageWithPayload[];
@@ -79,7 +80,8 @@ const messagesSlice = createSlice({
         publishMessage.fulfilled,
         (state, action: PayloadAction<PublishMessageResponse>) => {
           state.publishLoading = false;
-         
+          // We could potentially add the published message to the state
+          // but for now we'll just clear the error
         }
       )
       .addCase(publishMessage.rejected, (state, action) => {
@@ -96,7 +98,7 @@ const messagesSlice = createSlice({
         consumeMessages.fulfilled,
         (state, action: PayloadAction<ConsumeMessagesResponse>) => {
           state.consumeLoading = false;
-
+          // Add new messages to the existing ones
           state.messages = [...state.messages, ...action.payload.messages];
           state.nextSequenceNumber = action.payload.nextSequenceNumber;
         }

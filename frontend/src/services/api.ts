@@ -1,9 +1,11 @@
+// frontend/src/services/api.ts
 import axios, { AxiosResponse, AxiosError, AxiosRequestConfig } from 'axios';
 import { ApiResponse } from '@/types/topic';
+import config from '@/utils/env';
 
 // Create an axios instance
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: `${config.API_BASE_URL}/api`,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
@@ -14,6 +16,10 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // You could add authorization token here if needed
+    // const token = localStorage.getItem('token');
+    // if (token) {
+    //   config.headers['Authorization'] = `Bearer ${token}`;
+    // }
     return config;
   },
   (error) => {
@@ -36,9 +42,16 @@ apiClient.interceptors.response.use(
       // The request was made and the server responded with a status code
       // that falls out of the range of 2xx
       const errorData = error.response.data as any;
+      
+      // Log the error in development
+      if (config.IS_DEV) {
+        console.error('API Error Response:', errorData);
+      }
+      
       if (errorData.error) {
         return Promise.reject(errorData.error);
       }
+      
       return Promise.reject({
         code: `HTTP_${error.response.status}`,
         message: errorData.message || 'Server error',
@@ -46,12 +59,16 @@ apiClient.interceptors.response.use(
       });
     } else if (error.request) {
       // The request was made but no response was received
+      console.error('Network Error:', error.request);
+      
       return Promise.reject({
         code: 'NETWORK_ERROR',
         message: 'Network error. Please check your connection.',
       });
     } else {
       // Something happened in setting up the request that triggered an Error
+      console.error('Request Setup Error:', error.message);
+      
       return Promise.reject({
         code: 'REQUEST_SETUP_ERROR',
         message: error.message || 'Request configuration error.',

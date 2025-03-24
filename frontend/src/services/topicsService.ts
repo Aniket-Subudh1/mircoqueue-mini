@@ -1,34 +1,22 @@
-import { get, post } from './api';
-import { 
-  PublishMessageRequest, 
-  PublishMessageResponse, 
-  ConsumeMessagesRequest,
-  ConsumeMessagesResponse
-} from '@/types/message';
+import { get, post, del } from './api';
+import { Topic, CreateTopicRequest } from '@/types/topic';
 
-export const publishMessage = async (
-  topicId: string,
-  message: PublishMessageRequest
-): Promise<PublishMessageResponse> => {
-  return post<PublishMessageResponse>(`/topics/${topicId}/messages`, message);
+// Get all topics
+export const getTopics = async (): Promise<Topic[]> => {
+  return get<Topic[]>('/topics');
 };
 
-export const consumeMessages = async (
-  topicId: string,
-  request: ConsumeMessagesRequest
-): Promise<ConsumeMessagesResponse> => {
-  // Convert request to query parameters
-  const params: Record<string, any> = {
-    consumerGroupId: request.consumerGroupId,
-  };
-  
-  if (request.maxMessages !== undefined) {
-    params.maxMessages = request.maxMessages;
-  }
-  
-  if (request.waitTimeSeconds !== undefined) {
-    params.waitTimeSeconds = request.waitTimeSeconds;
-  }
-  
-  return get<ConsumeMessagesResponse>(`/topics/${topicId}/messages`, params);
+// Get a single topic by ID
+export const getTopic = async (topicId: string): Promise<Topic> => {
+  return get<Topic>(`/topics/${topicId}`);
+};
+
+// Create a new topic
+export const createTopic = async (topicData: CreateTopicRequest): Promise<Topic> => {
+  return post<Topic>('/topics', topicData);
+};
+
+// Delete a topic
+export const deleteTopic = async (topicId: string): Promise<void> => {
+  return del<void>(`/topics/${topicId}`);
 };

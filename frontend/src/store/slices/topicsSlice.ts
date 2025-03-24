@@ -1,6 +1,7 @@
+// frontend/src/store/slices/topicsSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { Topic, CreateTopicRequest } from '@/types/topic';
-import * as topicsService from '@/services/topicsService';
+import { topicsService } from '@/services/serviceFactory';
 
 interface TopicsState {
   topics: Topic[];
@@ -36,15 +37,7 @@ export const fetchTopic = createAsyncThunk(
   'topics/fetchTopic',
   async (topicId: string, { rejectWithValue }) => {
     try {
-      // Find in state first before fetching
-      const topics = await topicsService.getTopics();
-      const topic = topics.find(t => t.topicId === topicId);
-      
-      if (!topic) {
-        throw new Error(`Topic with ID ${topicId} not found`);
-      }
-      
-      return topic;
+      return await topicsService.getTopic(topicId);
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to fetch topic');
     }
