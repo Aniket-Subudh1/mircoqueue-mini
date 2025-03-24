@@ -1,22 +1,23 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { formatApiResponse } from '../../../common/utils';
 import { errorHandler } from '../../../common/errors';
-import metricService from '../../../services/metric-service';
+import clusterService from '../../../services/cluster-service';
 import logger from '../../../common/logger';
+import '../../../bootstrap';
 
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   try {
-    logger.debug('Get metrics request', { event });
+    logger.debug('Raft status request', { event });
 
-   
-    const metrics = await metricService.getDashboardMetrics();
+    // Get cluster status
+    const status = clusterService.getClusterStatus();
 
-   
-    return formatApiResponse(metrics);
+    // Return success response
+    return formatApiResponse(status);
   } catch (error) {
-    logger.error('Error getting metrics', { error });
+    logger.error('Error getting Raft status', { error });
     return errorHandler(error);
   }
 };

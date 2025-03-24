@@ -187,10 +187,10 @@ export const calculateSystemMetrics = async (): Promise<SystemMetrics> => {
     
     const recentMessagesResult = await dynamoClient.scan({
       TableName: TABLES.MESSAGES,
-      FilterExpression: '#ts >= :ts',
-      ExpressionAttributeNames: {
-        '#ts': 'timestamp',
-      },
+      FilterExpression: '#timestamp >= :ts',
+ExpressionAttributeNames: {
+  '#timestamp': 'timestamp',
+},
       ExpressionAttributeValues: {
         ':ts': oneHourAgo,
       },

@@ -23,6 +23,7 @@ provider:
     MESSAGES_BUCKET: microqueue-messages-dev-local
     ARCHIVE_BUCKET: microqueue-archive-dev-local
     IS_LOCAL: true
+    NODE_ID: microqueue-node-001
   
   iam:
     role:
@@ -57,6 +58,18 @@ provider:
         
         - Effect: Allow
           Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+            - sqs:GetQueueUrl
+            - sqs:ListQueues
+          Resource:
+            - !GetAtt MessagePublisherQueue.Arn
+            - !GetAtt MessagePublisherDeadLetterQueue.Arn
+        
+        - Effect: Allow
+          Action:
             - cloudwatch:PutMetricData
           Resource: "*"
 
@@ -80,6 +93,7 @@ custom:
     httpPort: 3001
     lambdaPort: 3002
     noAuth: true 
+
 functions:
   # Topic endpoints
   createTopic:
@@ -147,6 +161,31 @@ functions:
     events:
       - http:
           path: /metrics
+          method: get
+          cors: true
+          
+  # Raft consensus endpoints
+  raftAppendEntries:
+    handler: src/lambdas/api/raft/append-entries.handler
+    events:
+      - http:
+          path: /raft/append-entries
+          method: post
+          cors: true
+  
+  raftRequestVote:
+    handler: src/lambdas/api/raft/request-vote.handler
+    events:
+      - http:
+          path: /raft/request-vote
+          method: post
+          cors: true
+          
+  raftStatus:
+    handler: src/lambdas/api/raft/status.handler
+    events:
+      - http:
+          path: /raft/status
           method: get
           cors: true
   
@@ -271,6 +310,16 @@ resources:
               Transitions:
                 - TransitionInDays: 30
                   StorageClass: STANDARD_IA
+        CorsConfiguration:
+          CorsRules:
+            - AllowedMethods:
+                - GET
+                - HEAD
+              AllowedOrigins:
+                - '*'
+              AllowedHeaders:
+                - '*'
+              MaxAge: 3000
     
     ArchiveBucket:
       Type: AWS::S3::Bucket
@@ -367,6 +416,26 @@ resources:
               }
             ]
           }
+    
+    # CloudWatch Alarm for API errors
+    ApiErrorsAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: MicroQueue-APIErrorRate-${self:provider.stage}
+        AlarmDescription: Alarm when API error rate exceeds threshold
+        MetricName: 5XXError
+        Namespace: AWS/ApiGateway
+        Statistic: Sum
+        Period: 60
+        EvaluationPeriods: 5
+        Threshold: 5
+        ComparisonOperator: GreaterThanThreshold
+        Dimensions:
+          - Name: ApiName
+            Value: ${self:service}-${self:provider.stage}
+          - Name: Stage
+            Value: ${self:provider.stage}
+        TreatMissingData: notBreaching
 
   Outputs:
     ApiEndpoint:

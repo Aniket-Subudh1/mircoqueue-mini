@@ -90,16 +90,14 @@ export const getConsumerGroupByName = async (
   }
 };
 
-/**
- * List all consumer groups for a topic
- */
+
 export const listConsumerGroups = async (topicId: string): Promise<ConsumerGroup[]> => {
   logger.debug('Listing consumer groups', { topicId });
 
   try {
-    const result = await dynamoClient.query({
+    const result = await dynamoClient.scan({
       TableName: TABLES.CONSUMER_GROUPS,
-      KeyConditionExpression: 'topicId = :topicId',
+      FilterExpression: 'topicId = :topicId',
       ExpressionAttributeValues: {
         ':topicId': topicId,
       },
