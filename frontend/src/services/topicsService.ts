@@ -1,3 +1,4 @@
+// frontend/src/services/topicsService.ts
 import { get, post, del } from './api';
 import { Topic, CreateTopicRequest } from '@/types/topic';
 

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import Dashboard from '@/pages/Dashboard';
-import TopicsPage from '@/pages/Topics/TopicsPage';
+
 import TopicDetail from '@/pages/Topics/TopicDetail';
 import PublishMessage from '@/pages/Messages/PublishMessage';
 import ConsumeMessages from '@/pages/Messages/ConsumeMessages';
@@ -29,13 +29,7 @@ const routes: Route[] = [
     label: 'Dashboard',
     icon: 'dashboard',
   },
-  {
-    path: '/topics',
-    component: <TopicsPage />,
-    layout: 'main',
-    label: 'Topics',
-    icon: 'topic',
-  },
+  
   {
     path: '/topics/:topicId',
     component: <TopicDetail />,

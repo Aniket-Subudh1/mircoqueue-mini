@@ -5,7 +5,7 @@ import config from '@/utils/env';
 
 // Create an axios instance
 const apiClient = axios.create({
-  baseURL: `${config.API_BASE_URL}/api`,
+  baseURL: config.API_BASE_URL,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
@@ -20,6 +20,12 @@ apiClient.interceptors.request.use(
     // if (token) {
     //   config.headers['Authorization'] = `Bearer ${token}`;
     // }
+    
+    // Log requests in development mode
+    if (import.meta.env.DEV) {
+      console.log('API Request:', config.method?.toUpperCase(), config.url, config.data || config.params);
+    }
+    
     return config;
   },
   (error) => {
@@ -30,14 +36,24 @@ apiClient.interceptors.request.use(
 // Add a response interceptor
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
+    // Log response in development mode
+    if (import.meta.env.DEV) {
+      console.log('API Response:', response.status, response.data);
+    }
+    
     // Check if the response has the expected format
-    if (response.data.success !== undefined) {
+    if (response.data && response.data.success !== undefined) {
       return response.data;
     }
+    
     // If not, wrap it in our ApiResponse format
     return { success: true, data: response.data };
   },
   (error: AxiosError) => {
+    if (import.meta.env.DEV) {
+      console.error('API Error:', error);
+    }
+    
     if (error.response) {
       // The request was made and the server responded with a status code
       // that falls out of the range of 2xx
@@ -77,13 +93,30 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Add the stage to the URL if it's not already there
+const prependStage = (url: string): string => {
+  const stage = config.API_STAGE;
+  if (!stage || url.startsWith(`/${stage}`)) {
+    return url;
+  }
+  
+  // Ensure we have a leading slash for the stage
+  const formattedStage = stage.startsWith('/') ? stage : `/${stage}`;
+  
+  // Ensure we don't have double slashes when joining
+  const formattedUrl = url.startsWith('/') ? url : `/${url}`;
+  
+  return `${formattedStage}${formattedUrl}`;
+};
+
 // Generic GET request
 export const get = async <T>(
   url: string,
   params?: Record<string, any>,
   config?: AxiosRequestConfig
 ): Promise<T> => {
-  const response = await apiClient.get<any, ApiResponse<T>>(url, {
+  const stageUrl = prependStage(url);
+  const response = await apiClient.get<any, ApiResponse<T>>(stageUrl, {
     ...config,
     params,
   });
@@ -101,7 +134,8 @@ export const post = async <T>(
   data?: any,
   config?: AxiosRequestConfig
 ): Promise<T> => {
-  const response = await apiClient.post<any, ApiResponse<T>>(url, data, config);
+  const stageUrl = prependStage(url);
+  const response = await apiClient.post<any, ApiResponse<T>>(stageUrl, data, config);
   
   if (!response.success) {
     throw response.error;
@@ -116,7 +150,8 @@ export const put = async <T>(
   data?: any,
   config?: AxiosRequestConfig
 ): Promise<T> => {
-  const response = await apiClient.put<any, ApiResponse<T>>(url, data, config);
+  const stageUrl = prependStage(url);
+  const response = await apiClient.put<any, ApiResponse<T>>(stageUrl, data, config);
   
   if (!response.success) {
     throw response.error;
@@ -130,7 +165,8 @@ export const del = async <T>(
   url: string,
   config?: AxiosRequestConfig
 ): Promise<T> => {
-  const response = await apiClient.delete<any, ApiResponse<T>>(url, config);
+  const stageUrl = prependStage(url);
+  const response = await apiClient.delete<any, ApiResponse<T>>(stageUrl, config);
   
   if (!response.success) {
     throw response.error;
