@@ -8,7 +8,6 @@ import AWS from 'aws-sdk';
 // Initialize CloudWatch client
 const cloudWatch = new AWS.CloudWatch();
 
-
 export const calculateTopicMetrics = async (topicId: string): Promise<TopicMetrics> => {
   logger.debug('Calculating topic metrics', { topicId });
 
@@ -27,18 +26,15 @@ export const calculateTopicMetrics = async (topicId: string): Promise<TopicMetri
 
     // Get the most recent messages for rate calculation (last hour)
     const oneHourAgo = Date.now() - 60 * 60 * 1000;
-    
-    // Just count the messages from the last hour
-    const recentMessagesResult = await dynamoClient.query({
+
+    // Count messages from the last hour
+    const recentMessagesResult = await dynamoClient.scan({
       TableName: TABLES.MESSAGES,
-      KeyConditionExpression: 'topicId = :topicId AND sequenceNumber > :seq',
       FilterExpression: '#ts >= :ts',
       ExpressionAttributeNames: {
         '#ts': 'timestamp',
       },
       ExpressionAttributeValues: {
-        ':topicId': topicId,
-        ':seq': 0,
         ':ts': oneHourAgo,
       },
       Select: 'COUNT',
@@ -47,16 +43,20 @@ export const calculateTopicMetrics = async (topicId: string): Promise<TopicMetri
     const recentMessagesCount = recentMessagesResult.Count || 0;
     const publishRate = recentMessagesCount / 60; // messages per minute
 
-    // Get the size statistics for messages
+    // Get size statistics for messages (sample recent 100 messages)
     const messageSizesResult = await dynamoClient.query({
       TableName: TABLES.MESSAGES,
-      KeyConditionExpression: 'topicId = :topicId',
+      KeyConditionExpression: 'topicId = :topicId AND sequenceNumber >= :minSeq',
       ExpressionAttributeValues: {
         ':topicId': topicId,
+        ':minSeq': 0,
       },
-      Limit: 100, // Just sample the most recent 100 messages
-      ScanIndexForward: false, // Descending order to get the most recent
-      ProjectionExpression: 'size',
+      Limit: 100,
+      ScanIndexForward: false,
+      ProjectionExpression: '#size',
+      ExpressionAttributeNames: {
+        '#size': 'size',
+      },
     }).promise();
 
     const messageSizes = (messageSizesResult.Items || []).map((item) => item.size || 0);
@@ -65,27 +65,36 @@ export const calculateTopicMetrics = async (topicId: string): Promise<TopicMetri
       ? Math.round(totalSize / messageSizes.length)
       : 0;
 
-    // Get oldest and newest messages
+    // Get oldest message
     const oldestMessageResult = await dynamoClient.query({
       TableName: TABLES.MESSAGES,
-      KeyConditionExpression: 'topicId = :topicId',
+      KeyConditionExpression: 'topicId = :topicId AND sequenceNumber >= :minSeq',
       ExpressionAttributeValues: {
         ':topicId': topicId,
+        ':minSeq': 0, // Broad range
       },
       Limit: 1,
-      ScanIndexForward: true, // Ascending order to get the oldest
-      ProjectionExpression: 'timestamp',
+      ScanIndexForward: true, // Ascending order (oldest)
+      ProjectionExpression: '#ts',
+      ExpressionAttributeNames: {
+        '#ts': 'timestamp',
+      },
     }).promise();
 
+    // Get newest message
     const newestMessageResult = await dynamoClient.query({
       TableName: TABLES.MESSAGES,
-      KeyConditionExpression: 'topicId = :topicId',
+      KeyConditionExpression: 'topicId = :topicId AND sequenceNumber >= :minSeq',
       ExpressionAttributeValues: {
         ':topicId': topicId,
+        ':minSeq': 0, // Broad range
       },
       Limit: 1,
-      ScanIndexForward: false, // Descending order to get the newest
-      ProjectionExpression: 'timestamp',
+      ScanIndexForward: false, // Descending order (newest)
+      ProjectionExpression: '#ts',
+      ExpressionAttributeNames: {
+        '#ts': 'timestamp',
+      },
     }).promise();
 
     const oldestMessage = oldestMessageResult.Items && oldestMessageResult.Items.length > 0
@@ -106,35 +115,30 @@ export const calculateTopicMetrics = async (topicId: string): Promise<TopicMetri
     }).promise();
 
     const consumerGroups = consumerGroupsResult.Items || [];
-    
-    // Calculate average consume rate from the last hour of activity
+
+    // Calculate average consume rate
     let totalConsumeRate = 0;
     for (const group of consumerGroups) {
       const groupId = group.groupId;
-      
-      // Get offset
+
       const offsetResult = await dynamoClient.get({
         TableName: TABLES.OFFSETS,
         Key: { groupId, topicId },
       }).promise();
-      
+
       if (offsetResult.Item) {
         const lastConsumedTimestamp = offsetResult.Item.lastConsumedTimestamp || 0;
         const lastSequenceNumber = offsetResult.Item.lastSequenceNumber || 0;
-        
-        // If consumed in the last hour, estimate rate
+
         if (lastConsumedTimestamp > oneHourAgo) {
-          // Roughly estimate consume rate based on sequence number and timestamp
-          const consumedMessages = lastSequenceNumber;
           const hoursSinceStart = (lastConsumedTimestamp - topic.createdAt) / (60 * 60 * 1000);
-          
           if (hoursSinceStart > 0) {
-            totalConsumeRate += consumedMessages / (hoursSinceStart * 60); // per minute
+            totalConsumeRate += lastSequenceNumber / (hoursSinceStart * 60); // per minute
           }
         }
       }
     }
-    
+
     const consumeRate = consumerGroups.length > 0
       ? totalConsumeRate / consumerGroups.length
       : 0;
@@ -160,18 +164,15 @@ export const calculateSystemMetrics = async (): Promise<SystemMetrics> => {
   logger.debug('Calculating system metrics');
 
   try {
-    // Get counts from DynamoDB
     const [topicsResult, messagesResult, consumerGroupsResult] = await Promise.all([
       dynamoClient.scan({
         TableName: TABLES.TOPICS,
         Select: 'COUNT',
       }).promise(),
-      
       dynamoClient.scan({
         TableName: TABLES.MESSAGES,
         Select: 'COUNT',
       }).promise(),
-      
       dynamoClient.scan({
         TableName: TABLES.CONSUMER_GROUPS,
         Select: 'COUNT',
@@ -182,15 +183,14 @@ export const calculateSystemMetrics = async (): Promise<SystemMetrics> => {
     const totalMessages = messagesResult.Count || 0;
     const totalConsumerGroups = consumerGroupsResult.Count || 0;
 
-    // Calculate average publish rate (last hour)
     const oneHourAgo = Date.now() - 60 * 60 * 1000;
-    
+
     const recentMessagesResult = await dynamoClient.scan({
       TableName: TABLES.MESSAGES,
-      FilterExpression: '#timestamp >= :ts',
-ExpressionAttributeNames: {
-  '#timestamp': 'timestamp',
-},
+      FilterExpression: '#ts >= :ts',
+      ExpressionAttributeNames: {
+        '#ts': 'timestamp',
+      },
       ExpressionAttributeValues: {
         ':ts': oneHourAgo,
       },
@@ -198,42 +198,40 @@ ExpressionAttributeNames: {
     }).promise();
 
     const recentMessagesCount = recentMessagesResult.Count || 0;
-    const averagePublishRate = recentMessagesCount / 60; // messages per minute
+    const averagePublishRate = recentMessagesCount / 60;
 
-    // Estimate average consume rate
     let totalConsumeCount = 0;
-    
-    // Sample a subset of consumer groups for performance
+
     const consumerSampleResult = await dynamoClient.scan({
       TableName: TABLES.OFFSETS,
-      Limit: 100, // Sample at most 100 consumer groups
+      Limit: 100,
     }).promise();
-    
+
     const consumerSample = consumerSampleResult.Items || [];
-    
+
     for (const offset of consumerSample) {
       if (offset.lastConsumedTimestamp > oneHourAgo) {
         totalConsumeCount += offset.lastSequenceNumber || 0;
       }
     }
-    
+
     const averageConsumeRate = consumerSample.length > 0
       ? (totalConsumeCount / consumerSample.length) / 60
       : 0;
 
-    // Get S3 storage metrics from CloudWatch (this would work in a real AWS environment)
-    // For a hackathon, we'll estimate based on DynamoDB data
     let storageUsed = 0;
-    
-    // Get sample of message sizes
+
     const messageSizeSampleResult = await dynamoClient.scan({
       TableName: TABLES.MESSAGES,
       Limit: 100,
-      ProjectionExpression: 'size',
+      ProjectionExpression: '#size',
+      ExpressionAttributeNames: {
+        '#size': 'size',
+      },
     }).promise();
-    
+
     const messageSizes = (messageSizeSampleResult.Items || []).map((item) => item.size || 0);
-    
+
     if (messageSizes.length > 0) {
       const avgSize = messageSizes.reduce((sum, size) => sum + size, 0) / messageSizes.length;
       storageUsed = avgSize * totalMessages;
@@ -253,7 +251,6 @@ ExpressionAttributeNames: {
   }
 };
 
-
 export const pushMetricsToCloudWatch = async (
   topicMetrics: TopicMetrics[] = [],
   systemMetrics?: SystemMetrics
@@ -262,7 +259,6 @@ export const pushMetricsToCloudWatch = async (
     const timestamp = new Date();
     const metricData: AWS.CloudWatch.MetricData = [];
 
-    // Add topic metrics
     for (const topic of topicMetrics) {
       metricData.push(
         {
@@ -308,7 +304,6 @@ export const pushMetricsToCloudWatch = async (
       );
     }
 
-    // Add system metrics
     if (systemMetrics) {
       metricData.push(
         {
@@ -350,11 +345,10 @@ export const pushMetricsToCloudWatch = async (
       );
     }
 
-    // Push metrics to CloudWatch in batches of 20 (CloudWatch API limit)
     const batchSize = 20;
     for (let i = 0; i < metricData.length; i += batchSize) {
       const batch = metricData.slice(i, i + batchSize);
-      
+
       await cloudWatch.putMetricData({
         Namespace: 'MicroQueue',
         MetricData: batch,
@@ -362,7 +356,7 @@ export const pushMetricsToCloudWatch = async (
     }
   } catch (error) {
     logger.error('Error pushing metrics to CloudWatch', { error });
-   
+    throw error;
   }
 };
 
