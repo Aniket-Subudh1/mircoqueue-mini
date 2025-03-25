@@ -106,9 +106,9 @@ export const calculateTopicMetrics = async (topicId: string): Promise<TopicMetri
       : 0;
 
     // Get consumer groups to calculate consume rate
-    const consumerGroupsResult = await dynamoClient.query({
+    const consumerGroupsResult = await dynamoClient.scan({
       TableName: TABLES.CONSUMER_GROUPS,
-      KeyConditionExpression: 'topicId = :topicId',
+      FilterExpression: 'topicId = :topicId',
       ExpressionAttributeValues: {
         ':topicId': topicId,
       },
