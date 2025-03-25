@@ -79,7 +79,7 @@ const App = () => {
             selectedTopic={selectedTopic}
           />
 
-          <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'md:ml-64' : 'md:ml-20'}`}>
+          <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300`}>
             <header className="bg-white shadow-sm border-b border-gray-200">
               <div className="px-4 py-4 flex items-center justify-between">
                 <div className="flex items-center">
@@ -117,12 +117,7 @@ const App = () => {
               </div>
             </main>
 
-            <footer className="bg-white border-t border-gray-200 px-4 py-3">
-              <div className="text-center text-sm text-gray-600">
-                <p>MicroQueue Mini - Serverless Messaging System</p>
-                <p className="text-gray-400 text-xs mt-1">Version 1.0.0</p>
-              </div>
-            </footer>
+            
           </div>
         </div>
       </Toaster>

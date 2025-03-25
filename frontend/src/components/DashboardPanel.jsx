@@ -1,4 +1,3 @@
-// src/components/DashboardPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { 
   LineChart, 
@@ -28,11 +27,9 @@ const DashboardPanel = () => {
   const [refreshInterval, setRefreshInterval] = useState(null);
   const [activeTimeRange, setActiveTimeRange] = useState('day');
   
-  // Fetch metrics on mount and when refresh interval changes
   useEffect(() => {
     fetchMetrics();
     
-    // Set up auto-refresh if enabled
     if (refreshInterval) {
       const timer = setInterval(fetchMetrics, refreshInterval * 1000);
       return () => clearInterval(timer);
@@ -54,28 +51,21 @@ const DashboardPanel = () => {
     }
   };
   
-  // Format bytes to human-readable format
   const formatBytes = (bytes, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
-    
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
   
-  // Format date for display
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleString();
   };
   
-  // Get topic metrics data in format for charts
   const getTopicChartData = () => {
     if (!metrics || !metrics.topics) return [];
-    
     return metrics.topics.map(topic => ({
       name: topic.name.length > 10 ? topic.name.substring(0, 10) + '...' : topic.name,
       fullName: topic.name,
@@ -90,39 +80,34 @@ const DashboardPanel = () => {
     }));
   };
   
-  // Calculate consumer lag for all topics
   const calculateTotalLag = () => {
     if (!metrics || !metrics.topics) return 0;
-    
     return metrics.topics.reduce((total, topic) => {
       const lag = Math.max(0, topic.publishRate - topic.consumeRate);
       return total + lag;
     }, 0).toFixed(2);
   };
 
-  // Generate historical data for charts
   const generateHistoricalData = (timeRange) => {
     const now = new Date();
     const data = [];
-    let interval;
-    let format;
-    let points;
+    let interval, format, points;
     
     switch (timeRange) {
       case 'hour':
-        interval = 5 * 60 * 1000; // 5 minutes
+        interval = 5 * 60 * 1000;
         format = (date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        points = 12; // Last hour in 5-min intervals
+        points = 12;
         break;
       case 'day':
-        interval = 60 * 60 * 1000; // 1 hour
+        interval = 60 * 60 * 1000;
         format = (date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        points = 24; // Last 24 hours
+        points = 24;
         break;
       case 'week':
-        interval = 24 * 60 * 60 * 1000; // 1 day
+        interval = 24 * 60 * 60 * 1000;
         format = (date) => date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-        points = 7; // Last 7 days
+        points = 7;
         break;
       default:
         interval = 60 * 60 * 1000;
@@ -130,16 +115,11 @@ const DashboardPanel = () => {
         points = 24;
     }
     
-    // Generate random but somewhat consistent historical data
     for (let i = points - 1; i >= 0; i--) {
       const time = new Date(now - (i * interval));
-      
-      // Use a seed based on the time to generate consistent random values
       const seed = time.getHours() + time.getDate();
       const basePublishRate = metrics?.system?.averagePublishRate || 5;
       const baseConsumeRate = metrics?.system?.averageConsumeRate || 4;
-      
-      // Random multiplier that's consistent for the same time
       const multiplier = (Math.sin(seed * 0.5) + 1) * 0.4 + 0.8;
       
       data.push({
@@ -150,40 +130,39 @@ const DashboardPanel = () => {
         messageCount: Math.floor((metrics?.system?.totalMessages || 1000) * (1 - (i / points))),
       });
     }
-    
     return data;
   };
   
-  // Get theme colors for charts
   const COLORS = {
-    primary: '#3B82F6', // blue-500
-    secondary: '#10B981', // green-500
-    warning: '#F59E0B', // amber-500
-    danger: '#EF4444', // red-500
-    purple: '#8B5CF6', // violet-500
-    pink: '#EC4899', // pink-500
-    gray: '#6B7280', // gray-500
+    primary: '#3B82F6',
+    secondary: '#10B981',
+    warning: '#F59E0B',
+    danger: '#EF4444',
+    purple: '#8B5CF6',
+    pink: '#EC4899',
+    gray: '#6B7280',
   };
   
-  // Get pie chart data for topic distribution
   const getTopicDistributionData = () => {
     if (!metrics || !metrics.topics) return [];
-    
     return metrics.topics.map(topic => ({
       name: topic.name,
       value: topic.messageCount
     }));
   };
 
+  // Safe label formatter to prevent undefined errors
+  const safeLabelFormatter = (label, props) => {
+    if (!props || props.length === 0 || !props[0].payload) return label;
+    return props[0].payload.fullName || label;
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header and Controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">System Metrics Dashboard</h2>
-          <p className="text-gray-600 mt-1">
-            Monitor your MicroQueue system performance and activity
-          </p>
+          <p className="text-gray-600 mt-1">Monitor your MicroQueue system performance and activity</p>
         </div>
         
         <div className="flex flex-col md:flex-row gap-2 md:items-center">
@@ -252,7 +231,6 @@ const DashboardPanel = () => {
         </Card>
       ) : (
         <div className="space-y-6">
-          {/* System Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
               <div className="flex items-center">
@@ -311,14 +289,10 @@ const DashboardPanel = () => {
             </Card>
           </div>
           
-          {/* Message Throughput History */}
           <Card title="Message Throughput History">
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={generateHistoricalData(activeTimeRange)}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                >
+                <AreaChart data={generateHistoricalData(activeTimeRange)} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="time" />
                   <YAxis />
@@ -330,63 +304,27 @@ const DashboardPanel = () => {
                     }}
                   />
                   <Legend />
-                  <Area 
-                    type="monotone" 
-                    dataKey="publishRate" 
-                    name="Publish Rate" 
-                    stackId="1" 
-                    stroke={COLORS.primary} 
-                    fill={COLORS.primary}
-                    fillOpacity={0.5}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="consumeRate" 
-                    name="Consume Rate" 
-                    stackId="2" 
-                    stroke={COLORS.secondary} 
-                    fill={COLORS.secondary}
-                    fillOpacity={0.5}
-                  />
+                  <Area type="monotone" dataKey="publishRate" name="Publish Rate" stackId="1" stroke={COLORS.primary} fill={COLORS.primary} fillOpacity={0.5} />
+                  <Area type="monotone" dataKey="consumeRate" name="Consume Rate" stackId="2" stroke={COLORS.secondary} fill={COLORS.secondary} fillOpacity={0.5} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </Card>
           
-          {/* Message Count by Topic & Message Distribution */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card title="Message Count by Topic">
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={getTopicChartData()}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
-                    layout="vertical"
-                  >
+                  <BarChart data={getTopicChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 50 }} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" />
-                    <YAxis 
-                      type="category" 
-                      dataKey="name" 
-                      width={100}
-                      tick={{fontSize: 12}}
-                    />
+                    <YAxis type="category" dataKey="name" width={100} tick={{fontSize: 12}} />
                     <Tooltip 
-                      formatter={(value, name, props) => {
-                        if (name === 'messageCount') return [value.toLocaleString(), 'Messages'];
-                        return [value, name];
-                      }}
-                      labelFormatter={(value, props) => {
-                        return props[0].payload.fullName;
-                      }}
+                      formatter={(value, name) => name === 'messageCount' ? [value.toLocaleString(), 'Messages'] : [value, name]}
+                      labelFormatter={safeLabelFormatter}
                     />
                     <Legend />
-                    <Bar 
-                      dataKey="messageCount" 
-                      name="Message Count" 
-                      fill={COLORS.primary} 
-                      radius={[0, 4, 4, 0]}
-                    />
+                    <Bar dataKey="messageCount" name="Message Count" fill={COLORS.primary} radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -410,9 +348,7 @@ const DashboardPanel = () => {
                         <Cell key={`cell-${index}`} fill={[COLORS.primary, COLORS.secondary, COLORS.warning, COLORS.danger, COLORS.purple, COLORS.pink, COLORS.gray][index % 7]} />
                       ))}
                     </Pie>
-                    <Tooltip 
-                      formatter={(value) => [value.toLocaleString(), 'Messages']}
-                    />
+                    <Tooltip formatter={(value) => [value.toLocaleString(), 'Messages']} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -420,14 +356,10 @@ const DashboardPanel = () => {
             </Card>
           </div>
           
-          {/* Message Rates by Topic */}
           <Card title="Message Throughput by Topic">
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={getTopicChartData()}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
+                <BarChart data={getTopicChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
@@ -438,9 +370,7 @@ const DashboardPanel = () => {
                       if (name === 'lag') return [`${value} msgs/min`, 'Lag'];
                       return [value, name];
                     }}
-                    labelFormatter={(value, props) => {
-                      return props[0].payload.fullName;
-                    }}
+                    labelFormatter={safeLabelFormatter}
                   />
                   <Legend />
                   <Bar dataKey="publishRate" name="Publish Rate" fill={COLORS.primary} />
@@ -451,31 +381,20 @@ const DashboardPanel = () => {
             </div>
           </Card>
           
-          {/* Average Message Size & System Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card title="Average Message Size by Topic" className="md:col-span-2">
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={getTopicChartData()}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
-                  >
+                  <BarChart data={getTopicChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} />
                     <YAxis />
                     <Tooltip 
                       formatter={(value) => [formatBytes(value), 'Avg. Size']}
-                      labelFormatter={(value, props) => {
-                        return props[0].payload.fullName;
-                      }}
+                      labelFormatter={safeLabelFormatter}
                     />
                     <Legend />
-                    <Bar 
-                      dataKey="avgMessageSize" 
-                      name="Average Message Size" 
-                      fill={COLORS.purple} 
-                      radius={[4, 4, 0, 0]}
-                    />
+                    <Bar dataKey="avgMessageSize" name="Average Message Size" fill={COLORS.purple} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -484,9 +403,7 @@ const DashboardPanel = () => {
             <Card title="System Metrics">
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500">
-                    Avg Publish Rate (msgs/min)
-                  </h4>
+                  <h4 className="text-sm font-medium text-gray-500">Avg Publish Rate (msgs/min)</h4>
                   <div className="mt-1 flex items-center">
                     <div className="w-full bg-gray-200 rounded-full h-2.5 mr-2">
                       <div 
@@ -501,9 +418,7 @@ const DashboardPanel = () => {
                 </div>
                 
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500">
-                    Avg Consume Rate (msgs/min)
-                  </h4>
+                  <h4 className="text-sm font-medium text-gray-500">Avg Consume Rate (msgs/min)</h4>
                   <div className="mt-1 flex items-center">
                     <div className="w-full bg-gray-200 rounded-full h-2.5 mr-2">
                       <div 
@@ -518,18 +433,14 @@ const DashboardPanel = () => {
                 </div>
                 
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500">
-                    Storage Used
-                  </h4>
+                  <h4 className="text-sm font-medium text-gray-500">Storage Used</h4>
                   <div className="text-lg font-semibold mt-1">
                     {formatBytes(metrics.system.storageUsed)}
                   </div>
                 </div>
                 
                 <div className="pt-4 border-t border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-500">
-                    System Health
-                  </h4>
+                  <h4 className="text-sm font-medium text-gray-500">System Health</h4>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <div className="flex items-center text-sm">
                       <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
@@ -553,59 +464,34 @@ const DashboardPanel = () => {
             </Card>
           </div>
           
-          {/* Topic Details Table */}
           <Card title="Topic Metrics Details">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 rounded-lg">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Topic
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Message Count
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Publish Rate
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Consume Rate
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Lag
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Avg. Message Size
-                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message Count</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Publish Rate</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consume Rate</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lag</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg. Message Size</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {metrics.topics.map(topic => (
                     <tr key={topic.topicId} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {topic.name}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                        {topic.messageCount.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-blue-600">
-                        {topic.publishRate.toFixed(2)} msgs/min
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-green-600">
-                        {topic.consumeRate.toFixed(2)} msgs/min
-                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{topic.name}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{topic.messageCount.toLocaleString()}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-blue-600">{topic.publishRate.toFixed(2)} msgs/min</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-green-600">{topic.consumeRate.toFixed(2)} msgs/min</td>
                       <td className={`px-4 py-2 whitespace-nowrap text-sm ${
-                        (topic.publishRate - topic.consumeRate) > 5 
-                          ? 'text-red-600' 
-                          : (topic.publishRate - topic.consumeRate) > 0 
-                            ? 'text-amber-600' 
-                            : 'text-gray-500'
+                        (topic.publishRate - topic.consumeRate) > 5 ? 'text-red-600' : 
+                        (topic.publishRate - topic.consumeRate) > 0 ? 'text-amber-600' : 
+                        'text-gray-500'
                       }`}>
                         {Math.max(0, (topic.publishRate - topic.consumeRate)).toFixed(2)} msgs/min
                       </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                        {formatBytes(topic.averageMessageSize)}
-                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{formatBytes(topic.averageMessageSize)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -613,13 +499,10 @@ const DashboardPanel = () => {
             </div>
           </Card>
           
-          <div className="text-xs text-gray-500 text-right">
-            Last updated: {new Date().toLocaleString()}
-          </div>
+          <div className="text-xs text-gray-500 text-right">Last updated: {new Date().toLocaleString()}</div>
         </div>
       )}
 
-      {/* No Data State */}
       {!isLoading && !error && (!metrics || metrics.topics.length === 0) && (
         <div className="bg-white rounded-lg shadow p-8 text-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -631,7 +514,6 @@ const DashboardPanel = () => {
         </div>
       )}
 
-      {/* System Health Monitor - Only shown when metrics exist */}
       {metrics && metrics.system && (
         <div className="mt-6 bg-white rounded-lg shadow p-4 border-t-4 border-green-500">
           <div className="flex items-center justify-between">
@@ -694,7 +576,6 @@ const DashboardPanel = () => {
         </div>
       )}
 
-      {/* Help Section */}
       <div className="mt-6 bg-white rounded-lg shadow p-4">
         <div className="flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

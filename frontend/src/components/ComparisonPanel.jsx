@@ -198,7 +198,7 @@ const ComparisonPanel = () => {
       {/* Use Case Suitability */}
       <Card title="Use Case Suitability">
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+          <table className="min-w-full bg-black border border-gray-200 rounded-lg">
             <thead className="bg-gray-100">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
